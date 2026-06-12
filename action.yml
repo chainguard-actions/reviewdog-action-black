@@ -1,0 +1,82 @@
+name: "Run black formatter with reviewdog"
+description: "\U0001F436 Run black formatter with reviewdog on pull requests to improve code review experience."
+author: "Rick Staa"
+inputs:
+  workdir:
+    description: "Working directory relative to the root directory."
+    required: false
+    default: "."
+  black_args:
+    description: "Additional black flags."
+    required: false
+    default: ""
+  verbose:
+    description: "Print black output."
+    required: false
+    default: "false"
+  # Reviewdog related inputs
+  github_token:
+    description: "GITHUB_TOKEN."
+    required: true
+    default: ${{ github.token }}
+  tool_name:
+    description: "Tool name to use for reviewdog reporter."
+    required: false
+    default: "black-format"
+  level:
+    description: "Report level for reviewdog [info, warning, error]."
+    required: false
+    default: "error"
+  reporter:
+    description: "Reporter of reviewdog command [github-pr-check, github-pr-review, github-check]."
+    required: false
+    default: "github-pr-check"
+  filter_mode:
+    description: "Filtering mode for the reviewdog command [added, diff_context, file, nofilter]."
+    required: false
+    default: "added"
+  fail_on_error:
+    description: "Exit code for reviewdog when errors are found [true, false]."
+    required: false
+    default: "false"
+  reviewdog_flags:
+    description: "Additional reviewdog flags."
+    required: false
+    default: ""
+runs:
+  using: "composite"
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - run: $GITHUB_ACTION_PATH/entrypoint.sh
+      shell: bash
+      env:
+        INPUT_WORKDIR: ${{ inputs.workdir }}
+        INPUT_BLACK_ARGS: ${{ inputs.black_args }}
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_TOOL_NAME: ${{ inputs.tool_name }}
+        INPUT_LEVEL: ${{ inputs.level }}
+        INPUT_REPORTER: ${{ inputs.reporter }}
+        INPUT_FILTER_MODE: ${{ inputs.filter_mode }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+        INPUT_REVIEWDOG_FLAGS: ${{ inputs.reviewdog_flags }}
+        INPUT_VERBOSE: ${{ inputs.verbose }}
+# Ref: https://haya14busa.github.io/github-action-brandings/
+branding:
+  icon: "check"
+  color: "blue"
