@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v3.22.3 | [`v3.22.3`](https://github.com/chainguard-actions/reviewdog-action-black/tree/v3.22.3) | [`3d535f7`](https://github.com/reviewdog/action-black/commit/3d535f757ab1a50ce069321dc77996f0399ebda8) |
 | v3.22.4 | [`v3.22.4`](https://github.com/chainguard-actions/reviewdog-action-black/tree/v3.22.4) | [`644053a`](https://github.com/reviewdog/action-black/commit/644053a260402bc4278a865906107bd8aef7fae8) |
 
 ## Privacy
