@@ -1,6 +1,11 @@
 {
   "owner": "reviewdog",
   "repo": "action-black",
-  "version": "",
-  "url": "https://github.com/reviewdog/action-black"
+  "version": "v3.23.0",
+  "commit_sha": "9b4feb439b707a9b7673086795cc53e417a03abe",
+  "url": "https://github.com/reviewdog/action-black",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "1",
+  "harden_agent_version": "1"
 }
