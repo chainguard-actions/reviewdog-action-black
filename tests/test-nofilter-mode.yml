@@ -1,4 +1,4 @@
-name: Test basic usage - clean Python code
+name: Test nofilter filter mode with github-check reporter
 on:
   workflow_dispatch:
 jobs:
@@ -9,22 +9,28 @@ jobs:
 
       - name: Create a clean Python file for testing
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/clean_python"
-          cat > "$GITHUB_WORKSPACE/tests/fixtures/clean_python/hello.py" << 'EOF'
-          print("hello world")
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/nofilter_python"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/nofilter_python/sample.py" << 'EOF'
+          def add(a, b):
+              return a + b
+
+
+          result = add(1, 2)
+          print(result)
           EOF
 
-      - name: Run action on clean Python code
+      - name: Run action with nofilter mode
         id: action
         uses: .
         with:
           github_token: ${{ github.token }}
-          workdir: tests/fixtures/clean_python
+          workdir: tests/fixtures/nofilter_python
           reporter: github-check
           filter_mode: nofilter
+          level: warning
           fail_level: none
 
       - name: Assert action completed successfully
         run: |
-          echo "Action completed without error"
+          echo "Action completed with nofilter mode without error"
           echo "PASS"

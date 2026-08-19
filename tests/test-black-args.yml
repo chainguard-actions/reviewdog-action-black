@@ -4,31 +4,29 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action with additional black arguments
+      - name: Create a clean Python file for testing
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/blackargs_python"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/blackargs_python/code.py" << 'EOF'
+          def long_function_name(argument_one, argument_two, argument_three):
+              return argument_one + argument_two + argument_three
+          EOF
+
+      - name: Run action with additional black args (line-length)
         id: action
         uses: .
         with:
-          workdir: pristine/reviewdog--action-black/v3.23.0/testdata
-          black_args: "--line-length 88"
-          github_token: fake-token-for-local-test
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/blackargs_python
+          black_args: "--line-length 120"
           reporter: github-check
           filter_mode: nofilter
           fail_level: none
-          fail_on_error: "false"
-          verbose: "true"
-        continue-on-error: true
 
-      - name: Assert action ran with black_args
+      - name: Assert action completed successfully with custom black args
         run: |
-          echo "Action outcome: ${{ steps.action.outcome }}"
-          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
-            echo "FAIL: action was skipped unexpectedly"
-            exit 1
-          fi
-          echo "PASS: action ran with custom black_args"
+          echo "Action completed with black_args='--line-length 120' without error"
+          echo "PASS"

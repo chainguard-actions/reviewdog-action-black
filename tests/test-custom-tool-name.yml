@@ -1,0 +1,35 @@
+name: Test custom tool name
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a clean Python file for testing
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/toolname_python"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/toolname_python/main.py" << 'EOF'
+          def greet(name):
+              return f"Hello, {name}!"
+
+
+          print(greet("world"))
+          EOF
+
+      - name: Run action with custom tool name
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/toolname_python
+          tool_name: my-custom-black-formatter
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action completed successfully with custom tool name
+        run: |
+          echo "Action completed with custom tool_name without error"
+          echo "PASS"

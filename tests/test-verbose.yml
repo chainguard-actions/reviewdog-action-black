@@ -4,30 +4,30 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action with verbose enabled
+      - name: Create a clean Python file for testing
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/verbose_python"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/verbose_python/clean.py" << 'EOF'
+          x = 1
+          y = 2
+          print(x + y)
+          EOF
+
+      - name: Run action with verbose mode enabled
         id: action
         uses: .
         with:
-          workdir: pristine/reviewdog--action-black/v3.23.0/testdata
-          github_token: fake-token-for-local-test
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/verbose_python
+          verbose: "true"
           reporter: github-check
           filter_mode: nofilter
           fail_level: none
-          fail_on_error: "false"
-          verbose: "true"
-        continue-on-error: true
 
-      - name: Assert action ran with verbose flag
+      - name: Assert action completed successfully with verbose mode
         run: |
-          echo "Action outcome: ${{ steps.action.outcome }}"
-          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
-            echo "FAIL: action was skipped unexpectedly"
-            exit 1
-          fi
-          echo "PASS: action ran with verbose=true"
+          echo "Action completed with verbose=true without error"
+          echo "PASS"
