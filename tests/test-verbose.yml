@@ -1,0 +1,33 @@
+name: Test verbose mode
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create well-formatted Python file
+        run: |
+          mkdir -p tests/fixtures/verbose-test
+          cat > tests/fixtures/verbose-test/sample.py << 'EOF'
+          x = 1
+          y = 2
+          print(x + y)
+          EOF
+
+      - name: Run action with verbose mode enabled
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/verbose-test
+          reporter: github-check
+          filter_mode: nofilter
+          verbose: "true"
+          fail_on_error: "false"
+
+      - name: Assert action completed successfully in verbose mode
+        run: |
+          echo "Action completed with verbose=true without error"
+          echo "PASS"

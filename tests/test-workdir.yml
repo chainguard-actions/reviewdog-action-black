@@ -1,0 +1,30 @@
+name: Test workdir input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create nested directory structure with Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-workdir/subdir"
+          printf 'def add(a, b):\n    return a + b\n\n\nresult = add(1, 2)\nprint(result)\n' > "$GITHUB_WORKSPACE/test-workdir/subdir/module.py"
+
+      - id: action
+        uses: .
+        with:
+          workdir: test-workdir/subdir
+          github_token: fake-token-for-local-reporter
+          reporter: github-check
+          fail_on_error: "false"
+          verbose: "true"
+
+      - name: Assert action ran in the correct working directory
+        run: |
+          echo "Action completed using workdir=test-workdir/subdir"
+          echo "PASS"

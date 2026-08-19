@@ -1,0 +1,30 @@
+name: Test unformatted code with fail_on_error false
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create an unformatted Python file in workspace
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-unformatted"
+          printf 'x=1\ny=2\nprint(x+y)\n' > "$GITHUB_WORKSPACE/test-unformatted/bad.py"
+
+      - id: action
+        uses: .
+        with:
+          workdir: test-unformatted
+          github_token: fake-token-for-local-reporter
+          reporter: github-check
+          fail_on_error: "false"
+          verbose: "true"
+
+      - name: Assert action did not fail despite unformatted code
+        run: |
+          echo "Action completed without error even though code was unformatted (fail_on_error=false)"
+          echo "PASS"

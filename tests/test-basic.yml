@@ -1,0 +1,35 @@
+name: Test basic usage - well-formatted code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create well-formatted Python file
+        run: |
+          mkdir -p tests/fixtures/well-formatted
+          cat > tests/fixtures/well-formatted/good.py << 'EOF'
+          # Well-formatted Python file
+          def hello():
+              print("hello world")
+
+
+          hello()
+          EOF
+
+      - name: Run action on well-formatted code
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/well-formatted
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed without error"
+          echo "PASS"
