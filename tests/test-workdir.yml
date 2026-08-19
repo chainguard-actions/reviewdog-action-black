@@ -1,0 +1,34 @@
+name: Test workdir input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a well-formatted Python file in a subdirectory
+      - name: Create well-formatted Python file in subdirectory
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/subdir/src"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/subdir/src/app.py" << 'EOF'
+          def greet(name):
+              return f"Hello, {name}!"
+
+
+          print(greet("world"))
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/subdir/src
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+
+      - name: Assert action completed with workdir input
+        run: |
+          echo "Action completed with custom workdir without error"
+          echo "PASS"

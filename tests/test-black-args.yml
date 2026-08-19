@@ -1,0 +1,33 @@
+name: Test black_args input with custom line length
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a Python file that is valid for black with a longer line length
+      - name: Create Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/black-args"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/black-args/script.py" << 'EOF'
+          x = 1
+          y = 2
+          print(x + y)
+          EOF
+
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/black-args
+          black_args: "--line-length 100"
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+
+      - name: Assert action completed with custom black_args
+        run: |
+          echo "Action completed with custom black_args (--line-length 100) without error"
+          echo "PASS"

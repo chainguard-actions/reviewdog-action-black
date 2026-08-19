@@ -13,10 +13,10 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 export REVIEWDOG_VERSION=v0.20.3
 
 echo "[action-black] Installing reviewdog..."
-_install_script="$(mktemp)"
-wget -O "${_install_script}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
-sh "${_install_script}" -b /tmp "${REVIEWDOG_VERSION}"
-rm -f "${_install_script}"
+REVIEWDOG_INSTALL_SCRIPT="$(mktemp)"
+wget -O "${REVIEWDOG_INSTALL_SCRIPT}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
+sh "${REVIEWDOG_INSTALL_SCRIPT}" -b /tmp "${REVIEWDOG_VERSION}"
+rm -f "${REVIEWDOG_INSTALL_SCRIPT}"
 echo "[action-black] Reviewdog version: ${REVIEWDOG_VERSION}"
 
 if [[ "$(which black)" == "" ]]; then
@@ -30,7 +30,10 @@ black_exit_val="0"
 reviewdog_exit_val="0"
 if [[ "${INPUT_REPORTER}" = 'github-pr-review' ]]; then
   echo "[action-black] Checking python code with the black formatter and reviewdog..."
-  black_check_output="$(black --diff --quiet --check . "${INPUT_BLACK_ARGS}")" ||
+  # Use read-array to safely split optional multi-word flag variables.
+  IFS=' ' read -r -a black_args <<< "${INPUT_BLACK_ARGS}"
+  IFS=' ' read -r -a reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"
+  black_check_output="$(black --diff --quiet --check . "${black_args[@]+"${black_args[@]}"}")" ||
     black_exit_val="$?"
 
   # Input black formatter output to reviewdog.
@@ -41,14 +44,16 @@ if [[ "${INPUT_REPORTER}" = 'github-pr-review' ]]; then
     -filter-mode="diff_context" \
     -level="${INPUT_LEVEL}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
-    "${INPUT_REVIEWDOG_FLAGS}" || reviewdog_exit_val="$?"
+    "${reviewdog_flags[@]+"${reviewdog_flags[@]}"}" || reviewdog_exit_val="$?"
 
   # Re-generate black output. Needed because the output of the '--diff' option can not
   # be used to retrieve the files that black would change.
-  black_check_output="$(black --check . "${INPUT_BLACK_ARGS}" 2>&1)" || true
+  black_check_output="$(black --check . "${black_args[@]+"${black_args[@]}"}" 2>&1)" || true
 else
   echo "[action-black] Checking python code with the black formatter and reviewdog..."
-  black_check_output="$(black --check . "${INPUT_BLACK_ARGS}" 2>&1)" ||
+  IFS=' ' read -r -a black_args <<< "${INPUT_BLACK_ARGS}"
+  IFS=' ' read -r -a reviewdog_flags <<< "${INPUT_REVIEWDOG_FLAGS}"
+  black_check_output="$(black --check . "${black_args[@]+"${black_args[@]}"}" 2>&1)" ||
     black_exit_val="$?"
 
   # Input black formatter output to reviewdog.
@@ -58,7 +63,7 @@ else
     -filter-mode="${INPUT_FILTER_MODE}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    "${INPUT_REVIEWDOG_FLAGS}" || reviewdog_exit_val="$?"
+    "${reviewdog_flags[@]+"${reviewdog_flags[@]}"}" || reviewdog_exit_val="$?"
 fi
 
 # Print warning if no python files were found.
@@ -81,10 +86,14 @@ while read -r line; do
 done <<< "$black_check_output"
 
 # Append the array elements to BLACK_CHECK_FILE_PATHS in github env.
+# Sanitize newlines to prevent GITHUB_ENV injection via crafted file paths.
 # shellcheck disable=SC2129
-echo "BLACK_CHECK_FILE_PATHS<<EOF" >> "$GITHUB_ENV"
-echo "${black_check_file_paths[@]}" >> "$GITHUB_ENV"
-echo "EOF" >> "$GITHUB_ENV"
+{
+  echo "BLACK_CHECK_FILE_PATHS<<EOF"
+  printf '%s' "${black_check_file_paths[*]}" | tr -d '\n\r'
+  echo ""
+  echo "EOF"
+} >> "$GITHUB_ENV"
 
 # Throw error if an error occurred and fail_on_error is true.
 if [[ "${INPUT_FAIL_ON_ERROR}" = 'true' && ("${black_exit_val}" -ne '0' ||
