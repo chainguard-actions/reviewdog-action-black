@@ -1,0 +1,101 @@
+name: Test
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-empty:
+    name: runner / black-format (empty)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-check
+          level: info
+          workdir: ./testdata/emptyfolder
+      - name: Check if code is left untouched (not formatted)
+        run: |
+          changed_files=$(git diff --name-only -- testdata/emptyfolder/ | wc -l)
+          if [[ ${changed_files} -eq 0 ]]; then
+            echo "No changes detected!"
+          else
+            echo "Changes detected!"
+            exit 1
+          fi
+  test-check:
+    name: runner / black-format (github-check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-check
+          level: info
+          workdir: ./testdata/
+      - name: Check if code is left untouched (not formatted)
+        run: |
+          changed_files=$(git diff --name-only -- testdata/ | wc -l)
+          if [[ ${changed_files} -eq 0 ]]; then
+            echo "No changes detected!"
+          else
+            echo "Changes detected!"
+            exit 1
+          fi
+      - name: Check black would format the expected files
+        env:
+          BLACK_CHECK_FILE_PATHS: ${{ env.BLACK_CHECK_FILE_PATHS }}
+        run: |
+          expected_files=(num_guess.py num_guess.ipynb subfolder/queen_problem.py subfolder/queen_problem.ipynb)
+          read -ra checked_files <<< "$BLACK_CHECK_FILE_PATHS"
+          # Check whether the expected files are checked
+          for file in ${expected_files[@]}; do
+            if ! [[ " ${checked_files[*]} " == *"${file}"* ]]; then
+              echo "Black forgot to check file ${file}!"
+              exit 1
+            fi
+          done
+
+          # Check whether black checks files that should not be checked
+          for file in ${checked_files[@]}; do
+            trimmed_file="${file#${GITHUB_WORKSPACE}/testdata/}"
+            if ! [[ " ${expected_files[*]} " == *"${trimmed_file}"* ]]; then
+              echo "Unexpected file ${trimmed_file} got checked!"
+              exit 1
+            fi
+          done
+          echo "Black checked the expected files: [${expected_files[@]}] successfully!"
+
+  test-pr-check:
+    if: github.event_name == 'pull_request'
+    name: runner / black-format (github-pr-check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-check
+          level: warning
+          workdir: ./testdata/
+
+  test-pr-review:
+    if: github.event_name == 'pull_request'
+    name: runner / black-format (github-pr-review)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: ./
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review
+          level: error
+          reviewdog_flags: -filter-mode=file -fail-on-error
+          workdir: ./testdata/

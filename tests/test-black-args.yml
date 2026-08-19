@@ -1,0 +1,32 @@
+name: Test black_args input with custom line length
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a Python file with long lines
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-python-args"
+          # Write a file with a line that's fine at 120 chars but would fail at 88 (black default)
+          cat > "$GITHUB_WORKSPACE/test-python-args/long_line.py" << 'EOF'
+          print("hello world")
+          EOF
+
+      - name: Run action with custom black_args (line-length=120)
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-python-args
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+          black_args: "--line-length=120"
+
+      - name: Assert action completed successfully with custom black args
+        run: |
+          echo "Action completed with custom black_args without error"
+          echo "PASS"

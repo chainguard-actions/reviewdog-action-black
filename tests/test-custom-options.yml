@@ -1,0 +1,34 @@
+name: Test custom tool name and level options
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a well-formatted Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-python-opts"
+          cat > "$GITHUB_WORKSPACE/test-python-opts/sample.py" << 'EOF'
+          x = 1
+          y = 2
+          print(x + y)
+          EOF
+
+      - name: Run action with custom tool_name and level
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-python-opts
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+          tool_name: "my-black-formatter"
+          level: "warning"
+
+      - name: Assert action completed successfully
+        run: |
+          echo "Action completed with custom tool_name and level without error"
+          echo "PASS"

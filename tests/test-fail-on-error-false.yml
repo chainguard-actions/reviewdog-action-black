@@ -1,0 +1,29 @@
+name: Test fail_on_error false with unformatted code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create a poorly-formatted Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-python-unformatted"
+          # Write a file that black would want to reformat (bad quotes, spacing)
+          printf 'x=1\ny=2\nprint(x+y)\n' > "$GITHUB_WORKSPACE/test-python-unformatted/bad.py"
+
+      - name: Run action on unformatted code with fail_on_error false
+        id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-python-unformatted
+          reporter: github-check
+          filter_mode: nofilter
+          fail_on_error: "false"
+
+      - name: Assert action did not fail despite formatting issues
+        run: |
+          echo "Action completed without error even with unformatted code (fail_on_error=false)"
+          echo "PASS"

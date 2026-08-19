@@ -13,11 +13,10 @@ export REVIEWDOG_GITHUB_API_TOKEN="${INPUT_GITHUB_TOKEN}"
 export REVIEWDOG_VERSION=v0.20.3
 
 echo "[action-black] Installing reviewdog..."
-# Download the install script to a temp file for inspection before executing.
-_install_script="$(mktemp)"
-wget -O "${_install_script}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
-sh "${_install_script}" -b /tmp "${REVIEWDOG_VERSION}"
-rm -f "${_install_script}"
+REVIEWDOG_INSTALL_SCRIPT="$(mktemp)"
+wget -O "${REVIEWDOG_INSTALL_SCRIPT}" -q https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh
+sh "${REVIEWDOG_INSTALL_SCRIPT}" -b /tmp "${REVIEWDOG_VERSION}"
+rm -f "${REVIEWDOG_INSTALL_SCRIPT}"
 echo "[action-black] Reviewdog version: ${REVIEWDOG_VERSION}"
 
 if [[ "$(which black)" == "" ]]; then
@@ -26,16 +25,12 @@ if [[ "$(which black)" == "" ]]; then
 fi
 echo "[action-black] Black version: $(black --version)"
 
-# Build argument arrays from user-controlled inputs to prevent shell injection.
-read -ra black_args_array <<< "${INPUT_BLACK_ARGS}"
-read -ra reviewdog_flags_array <<< "${INPUT_REVIEWDOG_FLAGS}"
-
 # Run black with reviewdog.
 black_exit_val="0"
 reviewdog_exit_val="0"
 if [[ "${INPUT_REPORTER}" = 'github-pr-review' ]]; then
   echo "[action-black] Checking python code with the black formatter and reviewdog..."
-  black_check_output="$(black --diff --quiet --check . "${black_args_array[@]+"${black_args_array[@]}"}")" ||
+  black_check_output="$(black --diff --quiet --check . "${INPUT_BLACK_ARGS}")" ||
     black_exit_val="$?"
 
   # Input black formatter output to reviewdog.
@@ -46,14 +41,15 @@ if [[ "${INPUT_REPORTER}" = 'github-pr-review' ]]; then
     -filter-mode="diff_context" \
     -level="${INPUT_LEVEL}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
-    "${reviewdog_flags_array[@]+"${reviewdog_flags_array[@]}"}" || reviewdog_exit_val="$?"
+    "${INPUT_REVIEWDOG_FLAGS}" || reviewdog_exit_val="$?"
 
   # Re-generate black output. Needed because the output of the '--diff' option can not
   # be used to retrieve the files that black would change.
-  black_check_output="$(black --check . "${black_args_array[@]+"${black_args_array[@]}"}" 2>&1)" || true
+  # shellcheck disable=SC2034
+  black_check_output="$(black --check . "${INPUT_BLACK_ARGS}" 2>&1)" || true
 else
   echo "[action-black] Checking python code with the black formatter and reviewdog..."
-  black_check_output="$(black --check . "${black_args_array[@]+"${black_args_array[@]}"}" 2>&1)" ||
+  black_check_output="$(black --check . "${INPUT_BLACK_ARGS}" 2>&1)" ||
     black_exit_val="$?"
 
   # Input black formatter output to reviewdog.
@@ -63,7 +59,7 @@ else
     -filter-mode="${INPUT_FILTER_MODE}" \
     -fail-on-error="${INPUT_FAIL_ON_ERROR}" \
     -level="${INPUT_LEVEL}" \
-    "${reviewdog_flags_array[@]+"${reviewdog_flags_array[@]}"}" || reviewdog_exit_val="$?"
+    "${INPUT_REVIEWDOG_FLAGS}" || reviewdog_exit_val="$?"
 fi
 
 # Print warning if no python files were found.
@@ -86,12 +82,11 @@ while read -r line; do
 done <<< "$black_check_output"
 
 # Append the array elements to BLACK_CHECK_FILE_PATHS in github env.
-# Sanitize each path to strip newlines/carriage-returns before writing to GITHUB_ENV
-# to prevent environment variable injection via crafted black output.
+# Sanitize paths to strip any embedded newlines before writing to GITHUB_ENV.
 {
   echo "BLACK_CHECK_FILE_PATHS<<EOF"
   for _path in "${black_check_file_paths[@]+"${black_check_file_paths[@]}"}"; do
-    printf '%s' "${_path}" | tr -d '\n\r'
+    printf '%s' "$_path" | tr -d '\n\r'
     printf ' '
   done
   printf '\n'
