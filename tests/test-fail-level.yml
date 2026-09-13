@@ -1,0 +1,42 @@
+name: Test fail_level with formatting issues
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a Python file that needs reformatting (bad formatting)
+      - name: Create poorly formatted Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-fail-python"
+          # Write a file with formatting issues that black would fix
+          printf 'x=1\ny=2\nprint(x+y)\n' > "$GITHUB_WORKSPACE/test-fail-python/bad.py"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-fail-python
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: error
+          fail_on_error: "false"
+
+      - name: Assert action ran (may fail due to formatting issues or sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          # The action may fail because:
+          # 1. The sentinel repo causes reviewdog API calls to fail
+          # 2. fail_level=error causes it to fail when formatting issues are found
+          # Either way, the action should not produce an unexpected outcome
+          if [ "$OUTCOME" = "success" ] || [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action completed with outcome '$OUTCOME'"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

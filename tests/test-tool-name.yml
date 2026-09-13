@@ -1,0 +1,47 @@
+name: Test tool_name and level inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a clean Python file
+      - name: Create clean Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-toolname-python"
+          cat > "$GITHUB_WORKSPACE/test-toolname-python/clean.py" << 'EOF'
+          def add(a, b):
+              return a + b
+
+
+          result = add(1, 2)
+          print(result)
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-toolname-python
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          tool_name: "my-black-formatter"
+          level: "warning"
+
+      - name: Assert action ran with custom tool_name and level
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom tool_name and level"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

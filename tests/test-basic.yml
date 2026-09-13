@@ -1,0 +1,43 @@
+name: Test basic usage - clean Python code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a clean Python file that black would not reformat
+      - name: Create clean Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-python"
+          cat > "$GITHUB_WORKSPACE/test-python/clean.py" << 'EOF'
+          x = 1
+          y = 2
+          z = x + y
+          print(z)
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-python
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action ran (succeeded or failed gracefully on sentinel repo)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

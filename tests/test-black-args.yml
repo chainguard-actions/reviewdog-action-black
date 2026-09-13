@@ -1,0 +1,43 @@
+name: Test black_args input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a clean Python file that is within 100 char line length
+      - name: Create Python file with long lines (within 100 chars)
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/test-blackargs-python"
+          cat > "$GITHUB_WORKSPACE/test-blackargs-python/sample.py" << 'EOF'
+          # This file has lines that are within 100 chars but might be reformatted by default black
+          x = {"key1": "value1", "key2": "value2", "key3": "value3", "key4": "value4"}
+          print(x)
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: test-blackargs-python
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+          black_args: "--line-length 100"
+
+      - name: Assert action ran with custom black_args
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom black_args"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

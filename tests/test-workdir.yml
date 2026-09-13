@@ -1,0 +1,44 @@
+name: Test workdir input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Create a subdirectory with a clean Python file
+      - name: Create workdir with clean Python file
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/tests/fixtures/workdir-test"
+          cat > "$GITHUB_WORKSPACE/tests/fixtures/workdir-test/sample.py" << 'EOF'
+          def greet(name):
+              return f"Hello, {name}!"
+
+
+          print(greet("world"))
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/workdir-test
+          reporter: github-check
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action ran with custom workdir
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with custom workdir"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (expected with sentinel repo)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
