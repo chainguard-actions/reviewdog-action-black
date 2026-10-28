@@ -17,6 +17,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v3.23 | [`v3.23`](https://github.com/chainguard-actions/reviewdog-action-black/tree/v3.23) | [`9b4feb4`](https://github.com/reviewdog/action-black/commit/9b4feb439b707a9b7673086795cc53e417a03abe) | — |
 | v3.23.0 | [`v3.23.0`](https://github.com/chainguard-actions/reviewdog-action-black/tree/v3.23.0) | [`9b4feb4`](https://github.com/reviewdog/action-black/commit/9b4feb439b707a9b7673086795cc53e417a03abe) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-black/blob/v3.23.0/HARDENING.md) |
 | v3.24.0 | [`v3.24.0`](https://github.com/chainguard-actions/reviewdog-action-black/tree/v3.24.0) | [`5059d92`](https://github.com/reviewdog/action-black/commit/5059d92f0326f09326be64e1c50693374c7771cb) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-black/blob/v3.24.0/HARDENING.md) |
+| v3.25.0 | [`v3.25.0`](https://github.com/chainguard-actions/reviewdog-action-black/tree/v3.25.0) | [`7e1c3d9`](https://github.com/reviewdog/action-black/commit/7e1c3d9c6a3e7e9d202055c0d79deba392255c0c) | [`HARDENING.md`](https://github.com/chainguard-actions/reviewdog-action-black/blob/v3.25.0/HARDENING.md) |
 
 ## Privacy
 
