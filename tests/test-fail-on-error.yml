@@ -1,0 +1,33 @@
+name: Test fail_on_error fails on unformatted code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install black
+        run: |
+          if ! command -v black >/dev/null 2>&1; then
+            python3 -m pip install --user black \
+              || python3 -m pip install --user --break-system-packages black \
+              || pip3 install black
+          fi
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          workdir: tests/fixtures/unformatted
+          reporter: local
+          fail_on_error: "true"
+      - name: Assert action failed
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected failure with fail_on_error=true on unformatted code"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,37 @@
+name: Test unformatted file is detected
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install black
+        run: |
+          if ! command -v black >/dev/null 2>&1; then
+            python3 -m pip install --user black \
+              || python3 -m pip install --user --break-system-packages black \
+              || pip3 install black
+          fi
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/unformatted
+          reporter: local
+          verbose: "true"
+      - name: Assert bad.py reported as needing reformat
+        run: |
+          echo "BLACK_CHECK_FILE_PATHS: $BLACK_CHECK_FILE_PATHS"
+          if [[ "$BLACK_CHECK_FILE_PATHS" != *"bad.py"* ]]; then
+            echo "FAIL: expected bad.py in BLACK_CHECK_FILE_PATHS"
+            exit 1
+          fi
+          echo "PASS"
+      - name: Assert file was not modified (check mode only)
+        run: |
+          if ! grep -q "def add( a,b ):" tests/fixtures/unformatted/bad.py; then
+            echo "FAIL: bad.py was modified"
+            exit 1
+          fi
+          echo "PASS"

@@ -1,0 +1,29 @@
+name: Test formatted file is clean
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install black
+        run: |
+          if ! command -v black >/dev/null 2>&1; then
+            python3 -m pip install --user black \
+              || python3 -m pip install --user --break-system-packages black \
+              || pip3 install black
+          fi
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/formatted
+          reporter: local
+      - name: Assert no files reported
+        run: |
+          echo "BLACK_CHECK_FILE_PATHS: '$BLACK_CHECK_FILE_PATHS'"
+          if [ -n "$(echo "$BLACK_CHECK_FILE_PATHS" | tr -d '[:space:]')" ]; then
+            echo "FAIL: expected no files to need reformatting"
+            exit 1
+          fi
+          echo "PASS"

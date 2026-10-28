@@ -1,0 +1,43 @@
+name: Test black_args are passed to black
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install black
+        run: |
+          if ! command -v black >/dev/null 2>&1; then
+            python3 -m pip install --user black \
+              || python3 -m pip install --user --break-system-packages black \
+              || pip3 install black
+          fi
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - id: default_len
+        uses: .
+        with:
+          workdir: tests/fixtures/longline
+          reporter: local
+      - name: Assert long.py flagged with default line length
+        run: |
+          echo "BLACK_CHECK_FILE_PATHS: '$BLACK_CHECK_FILE_PATHS'"
+          if [[ "$BLACK_CHECK_FILE_PATHS" != *"long.py"* ]]; then
+            echo "FAIL: expected long.py to be flagged with default line length"
+            exit 1
+          fi
+          echo "PASS"
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/longline
+          reporter: local
+          black_args: "--line-length 200"
+      - name: Assert long.py not flagged with --line-length 200
+        run: |
+          echo "BLACK_CHECK_FILE_PATHS: '$BLACK_CHECK_FILE_PATHS'"
+          if [ -n "$(echo "$BLACK_CHECK_FILE_PATHS" | tr -d '[:space:]')" ]; then
+            echo "FAIL: expected no files flagged with --line-length 200"
+            exit 1
+          fi
+          echo "PASS"
