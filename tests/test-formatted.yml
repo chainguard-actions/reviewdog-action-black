@@ -1,0 +1,48 @@
+name: Test already formatted code
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Ensure black is installed
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          if ! command -v black >/dev/null 2>&1; then
+            PY="$(command -v python3 || command -v python || true)"
+            if [ -n "$PY" ]; then
+              "$PY" -m pip install --user black \
+                || "$PY" -m pip install --user --break-system-packages black \
+                || "$PY" -m pip install --break-system-packages black || true
+            fi
+          fi
+          if ! command -v black >/dev/null 2>&1; then
+            SUDO=""; [ "$(id -u)" != "0" ] && SUDO="sudo"
+            $SUDO apt-get update -y && $SUDO apt-get install -y black
+          fi
+          black --version
+      - id: action
+        uses: .
+        with:
+          workdir: tests/fixtures/formatted
+          reporter: local
+          filter_mode: nofilter
+          fail_on_error: "true"
+          verbose: "true"
+      - name: Assert no files need reformatting
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "BLACK_CHECK_FILE_PATHS: '$BLACK_CHECK_FILE_PATHS'"
+          if [ "$OUTCOME" != "success" ]; then
+            echo "FAIL: expected success"
+            exit 1
+          fi
+          if [ -n "$(echo "$BLACK_CHECK_FILE_PATHS" | tr -d '[:space:]')" ]; then
+            echo "FAIL: expected no files to reformat"
+            exit 1
+          fi
+          echo "PASS"
